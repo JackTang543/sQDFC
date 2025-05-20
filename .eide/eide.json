@@ -27,7 +27,9 @@
         "sLIB/FreeRTOS/portable/MemMang/heap_3.c",
         "sLIB/FreeRTOS/portable/MemMang/heap_2.c",
         "sLIB/FreeRTOS/portable/MemMang/heap_1.c",
-        "sLIB/FreeRTOS/portable/MemMang/heap_5.c"
+        "sLIB/FreeRTOS/portable/MemMang/heap_5.c",
+        "sLIB/cm_backtrace/fault_handler/iar/cmb_fault.S",
+        "sLIB/cm_backtrace/fault_handler/gcc/cmb_fault.S"
       ],
       "toolchain": "AC6",
       "compileConfig": {
@@ -112,7 +114,9 @@
           "sLIB/sightseerUtils",
           "sLIB/FreeRTOS/include",
           "sLIB/FreeRTOS",
-          "sLIB/FreeRTOS/portable/GCC"
+          "sLIB/FreeRTOS/portable/GCC",
+          "sLIB/MadgwickAHRS",
+          "sLIB/cm_backtrace"
         ],
         "libList": [],
         "defineList": [

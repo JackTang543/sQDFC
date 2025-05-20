@@ -1,6 +1,8 @@
 
 #include "stm32f4xx_it.h"
 
+#include "defines.h"
+
 extern UART_HandleTypeDef uart1;
 extern DMA_HandleTypeDef hdma_usart1_rx;
 extern DMA_HandleTypeDef hdma_usart1_tx;
@@ -93,5 +95,16 @@ void TIM6_DAC_IRQHandler(void){
 void EXTI9_5_IRQHandler(){
     //todo 不做判断先,还有一个PC9的LIS3_DRDY中断
     // HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_8);
+}
+
+//PC0 -> ICM_INT
+// void ISR_ATTR IRAM2_ATTR EXTI0_IRQHandler(){
+//     HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+// }
+
+
+#include "sUtils.h"
+void EXTI0_IRQHandler(){
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
 }
 
