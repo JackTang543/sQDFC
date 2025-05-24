@@ -20,6 +20,7 @@ extern SPI_HandleTypeDef hspi1;
 
 extern DMA_HandleTypeDef hdma_spi1_tx;
 
+extern I2C_HandleTypeDef hi2c1;
 
 
 void NMI_Handler(void){
@@ -104,7 +105,14 @@ void EXTI9_5_IRQHandler(){
 
 
 #include "sUtils.h"
-void EXTI0_IRQHandler(){
+void ISR_ATTR EXTI0_IRQHandler(){
     HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_0);
+}
+
+void ISR_ATTR I2C1_ER_IRQHandler(){
+    HAL_I2C_ER_IRQHandler(&hi2c1);
+}
+void ISR_ATTR I2C1_EV_IRQHandler(){
+    HAL_I2C_EV_IRQHandler(&hi2c1);
 }
 

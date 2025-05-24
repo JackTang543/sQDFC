@@ -340,20 +340,20 @@ void sAPP_AHRS_Task(void* param) {
 
             float dt = dt_ms / 1000.0f;
             // MadgwickAHRSupdate(input_gyr[0] * DEG2RAD, input_gyr[1] * DEG2RAD, input_gyr[2] * DEG2RAD, input_acc[0], input_acc[1], input_acc[2], input_mag[0], input_mag[1], input_mag[2]);
-            MadgwickAHRSupdateIMU(input_gyr[0] * DEG2RAD, input_gyr[1] * DEG2RAD, input_gyr[2] * DEG2RAD, input_acc[0], input_acc[1], input_acc[2]);
+            // MadgwickAHRSupdateIMU(input_gyr[0] * DEG2RAD, input_gyr[1] * DEG2RAD, input_gyr[2] * DEG2RAD, input_acc[0], input_acc[1], input_acc[2]);
             //四元数转换欧拉角
             //把上面的全部替换成q0 q1这样
-            eul[0] = atan2f(2.0F * (q0 * q1 + q2 * q3), 1.0F - 2.0F * (q1 * q1 + q2 * q2)) * RAD2DEG;
-            eul[1] = asinf(2.0F * (q0 * q2 - q1 * q3)) * RAD2DEG;
-            eul[2] = atan2f(2.0F * (q0 * q3 + q1 * q2), 1.0F - 2.0F * (q2 * q2 + q3 * q3)) * RAD2DEG;
-            quat[0] = q0;
-            quat[1] = q1;
-            quat[2] = q2;
-            quat[3] = q3;
+            // eul[0] = atan2f(2.0F * (q0 * q1 + q2 * q3), 1.0F - 2.0F * (q1 * q1 + q2 * q2)) * RAD2DEG;
+            // eul[1] = asinf(2.0F * (q0 * q2 - q1 * q3)) * RAD2DEG;
+            // eul[2] = atan2f(2.0F * (q0 * q3 + q1 * q2), 1.0F - 2.0F * (q2 * q2 + q3 * q3)) * RAD2DEG;
+            // quat[0] = q0;
+            // quat[1] = q1;
+            // quat[2] = q2;
+            // quat[3] = q3;
             // eul[0] = atan2f(2.0F * (quat[0] * quat[1] + quat[2] * quat[3]), 1.0F - 2.0F * (quat[1] * quat[1] + quat[2] * quat[2]));
             
             // MadgwickAHRSupdate(input_gyr[0], input_gyr[1], input_gyr[2], input_acc[0], input_acc[1], input_acc[2],input_mag[0], input_mag[1], input_mag[2]);
-            // ekf_AltEst6(input_gyr, input_acc, 2, dt, eul, quat, state);
+            ekf_AltEst6(input_gyr, input_acc, 2, dt, eul, quat, state);
             // sBSP_UART_Debug_Printf("%u\n",dwt.get_us());
             // sBSP_UART_Debug_Printf("%.3f,%.3f,%.3f,%u\n",ahrs.raw_data.gyr_x,ahrs.raw_data.gyr_y,ahrs.raw_data.gyr_z,HAL_GetTick());
             // sBSP_UART_Debug_Printf("%.3f,%.3f,%.3f,%u\n",ahrs.raw_data.acc_x,ahrs.raw_data.acc_y,ahrs.raw_data.acc_z,HAL_GetTick());

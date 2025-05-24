@@ -56,6 +56,13 @@ void sAPP_AHRS_Periodic(void* param){
         ahrs.periodicProcess();
         //Freq=50Hz
         vTaskDelay(20 / portTICK_PERIOD_MS);
+
+        sDRV_AHT20_StartMeasure();
+        // HAL_Delay(100);                                     // 延时500ms
+        float temp, humi;
+        sDRV_AHT20_GetMeasure(&temp, &humi);
+        //打印欧拉角
+        sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%.2f,%.2f\n", ahrs.output.pitch, ahrs.output.roll, ahrs.output.yaw,temp,humi);
     }
 }
 
@@ -83,90 +90,76 @@ void sAPP_AHRS_Periodic(void* param){
 // }
 
 
-// static void imu_calib_acc_bias(void* param){
-//     menu.setLock("IMU Calib","Accel is \ncalibrating...");
-//     log_info("在1s后开始校准加速度计静态零偏...");
-//     vTaskDelay(1000);
+static void imu_calib_acc_bias(void* param){
+    log_info("在1s后开始校准加速度计静态零偏...");
+    vTaskDelay(1000);
 
-//     //校准加速度计静态零偏
-//     AHRS::IMU_StaticBias imu_sbias;
-//     //静态零偏采样点数
-//     const uint16_t sample_points = 2000;
-//     ahrs.calcBias(sample_points,imu_sbias);
-//     float temp = ahrs.raw_data.imu_temp;
+    //校准加速度计静态零偏
+    AHRS::IMU_StaticBias imu_sbias;
+    //静态零偏采样点数
+    const uint16_t sample_points = 2000;
+    ahrs.calcBias(sample_points,imu_sbias);
+    float temp = ahrs.raw_data.imu_temp;
 
-//     log_info("测量点数:%u,加速度计静态零偏:%.3f,%.3f,%.3f",sample_points,imu_sbias.acc_x,imu_sbias.acc_y,imu_sbias.acc_z);
+    log_info("测量点数:%u,加速度计静态零偏:%.3f,%.3f,%.3f",sample_points,imu_sbias.acc_x,imu_sbias.acc_y,imu_sbias.acc_z);
 
-//     //静态零偏阈值,超过说明没有把系统放平
-//     const float bias_limit = 0.3f;
-//     if(fabs(imu_sbias.acc_x) > bias_limit || fabs(imu_sbias.acc_y) > bias_limit || fabs(imu_sbias.acc_z) > bias_limit){
-//         log_error("加速度计静态零偏数据超过阈值,请将主板放平后重试! 本次校准无效");
-//         menu.setUnlock();
-//         //提示用户
-//         menu.createTipsBox("Acc Calib FAIL","Plase take the\nsystem on\nflat surface!");
-//         goto END;
-//     }
+    //静态零偏阈值,超过说明没有把系统放平
+    const float bias_limit = 0.3f;
+    if(fabs(imu_sbias.acc_x) > bias_limit || fabs(imu_sbias.acc_y) > bias_limit || fabs(imu_sbias.acc_z) > bias_limit){
+        log_error("加速度计静态零偏数据超过阈值,请将主板放平后重试! 本次校准无效");
+        goto END;
+    }
 
-//     //保存静态零偏数据到FeRAM
-//     if(sAPP_ParamSave_SaveAccSBias(imu_sbias.acc_x,imu_sbias.acc_y,imu_sbias.acc_z,temp) != 0){
-//         log_error("加速度计静态零偏数据保存失败!");
-//         //提示用户
-//         menu.createTipsBox("Acc Calib FAIL","Static bias\nsave fail!");
-//         goto END;
-//     }
+    // //保存静态零偏数据到FeRAM
+    // if(sAPP_ParamSave_SaveAccSBias(imu_sbias.acc_x,imu_sbias.acc_y,imu_sbias.acc_z,temp) != 0){
+    //     log_error("加速度计静态零偏数据保存失败!");
+    //     //提示用户
+    //     menu.createTipsBox("Acc Calib FAIL","Static bias\nsave fail!");
+    //     goto END;
+    // }
 
-//     //保存静态零偏数据到AHRS
-//     ahrs.updateAccSBias(imu_sbias.acc_x,imu_sbias.acc_y,imu_sbias.acc_z);
-
-//     log_info("加速度计静态零偏校准完成,保存成功 OK");
-//     menu.createTipsBox("Acc Calib OK","Static bias\nsave success!");
+    //保存静态零偏数据到AHRS
+    ahrs.updateAccSBias(imu_sbias.acc_x,imu_sbias.acc_y,imu_sbias.acc_z);
 
 
-// END:
-//     menu.setUnlock();
-//     vTaskDelete(NULL);
-// }
+END:
+    vTaskDelete(NULL);
+}
 
-// static void imu_calib_gyr_bias(void* param){
-//     menu.setLock("IMU Calib","Gyro is \ncalibrating...");
-//     log_info("在1s后开始校准陀螺仪静态零偏...");
-//     vTaskDelay(1000);
+static void imu_calib_gyr_bias(void* param){
+    log_info("在1s后开始校准陀螺仪静态零偏...");
+    vTaskDelay(1000);
 
-//     //校准陀螺仪静态零偏
-//     AHRS::IMU_StaticBias imu_sbias;
-//     //静态零偏采样点数
-//     const uint16_t sample_points = 2000;
-//     float temp = ahrs.raw_data.imu_temp;
-//     ahrs.calcBias(sample_points,imu_sbias);
+    //校准陀螺仪静态零偏
+    AHRS::IMU_StaticBias imu_sbias;
+    //静态零偏采样点数
+    const uint16_t sample_points = 2000;
+    float temp = ahrs.raw_data.imu_temp;
+    ahrs.calcBias(sample_points,imu_sbias);
 
-//     log_info("测量点数:%u,陀螺仪静态零偏:%.3f,%.3f,%.3f",sample_points,imu_sbias.gyr_x,imu_sbias.gyr_y,imu_sbias.gyr_z);
+    log_info("测量点数:%u,陀螺仪静态零偏:%.3f,%.3f,%.3f",sample_points,imu_sbias.gyr_x,imu_sbias.gyr_y,imu_sbias.gyr_z);
 
-//     //静态零偏阈值,超过说明系统没有在静止状态或者陀螺仪有问题
-//     const float bias_limit = ahrs.getIMUType() == AHRS::IMUType::ICM45686 ? 0.3f : 0.5f;
-//     if(fabs(imu_sbias.gyr_x) > bias_limit || fabs(imu_sbias.gyr_y) > bias_limit || fabs(imu_sbias.gyr_z) > bias_limit){
-//         log_error("陀螺仪静态零偏数据超过阈值,可能是系统未处于静止状态或者陀螺仪性能不佳 本次校准无效");
-//         menu.createTipsBox("Gyro Calib FAIL","Plase keep the\nsystem in a\nstatic state!");
+    //静态零偏阈值,超过说明系统没有在静止状态或者陀螺仪有问题
+    const float bias_limit = ahrs.getIMUType() == AHRS::IMUType::ICM45686 ? 0.5f : 0.8f;
+    if(fabs(imu_sbias.gyr_x) > bias_limit || fabs(imu_sbias.gyr_y) > bias_limit || fabs(imu_sbias.gyr_z) > bias_limit){
+        log_error("陀螺仪静态零偏数据超过阈值,可能是系统未处于静止状态或者陀螺仪性能不佳 本次校准无效");
         
-//         goto END;
-//     }
+        goto END;
+    }
 
-//     //保存静态零偏数据到FeRAM
-//     if(sAPP_ParamSave_SaveGyrSBias(imu_sbias.gyr_x,imu_sbias.gyr_y,imu_sbias.gyr_z,temp) != 0){
-//         log_error("陀螺仪静态零偏数据保存失败!");
-//         menu.createTipsBox("Gyro Calib FAIL","Static bias\nsave fail!");
-//         goto END;
-//     }
+    // //保存静态零偏数据到FeRAM
+    // if(sAPP_ParamSave_SaveGyrSBias(imu_sbias.gyr_x,imu_sbias.gyr_y,imu_sbias.gyr_z,temp) != 0){
+    //     log_error("陀螺仪静态零偏数据保存失败!");
+    //     menu.createTipsBox("Gyro Calib FAIL","Static bias\nsave fail!");
+    //     goto END;
+    // }
 
-//     //保存静态零偏数据到AHRS
-//     ahrs.updateGyrSBias(imu_sbias.gyr_x,imu_sbias.gyr_y,imu_sbias.gyr_z);
+    //保存静态零偏数据到AHRS
+    ahrs.updateGyrSBias(imu_sbias.gyr_x,imu_sbias.gyr_y,imu_sbias.gyr_z);
 
-//     log_info("陀螺仪静态零偏校准完成,保存成功 OK");
-//     menu.createTipsBox("Gyro Calib OK","Static bias\nsave success!");
-
-// END:
-//     menu.setUnlock();
-//     vTaskDelete(NULL);
-// }
+END:
+    vTaskDelete(NULL);
+}
 
 
 // void sAPP_Tasks_ReadIMUCaliVal(){
@@ -271,8 +264,8 @@ void sAPP_Tasks_CreateAll(){
     // xTaskCreate(sAPP_Tasks_OLEDHdr      , "OLED"         , 16384 / sizeof(int), NULL, 2, NULL);
     xTaskCreate(sAPP_Tasks_Devices      , "Devices"      , 1024 / sizeof(int), NULL, 1, NULL);
 
-    xTaskCreate(sAPP_CLI_RecvTask           , "CLI Recv"     , 2048 / sizeof(int), NULL, 1, NULL);
-    xTaskCreate(sAPP_CLI_SendTask           , "CLI Send"     , 2048 / sizeof(int), NULL, 1, NULL);
+    xTaskCreate(sAPP_CLI_RecvTask       , "CLI Recv"     , 2048 / sizeof(int), NULL, 1, NULL);
+    xTaskCreate(sAPP_CLI_SendTask       , "CLI Send"     , 2048 / sizeof(int), NULL, 1, NULL);
 
     // xTaskCreate(sAPP_Car_InfoUpdateTask , "CarInfoUp"    , 2048 / sizeof(int), NULL, 1, NULL);
     // xTaskCreate(sAPP_Tasks_ProtectTask  , "Protect"      , 2048 / sizeof(int), NULL, 1, NULL);
@@ -292,13 +285,13 @@ void sAPP_Tasks_CreateAll(){
 //     xTaskCreate(calibrateIMU            , "calibrateIMU" , 1024 / sizeof(int), NULL, 1, NULL);
 // }
 
-// void sAPP_Tasks_StartCalibAccBias(){
-//     xTaskCreate(imu_calib_acc_bias      , "calibAccBias" , 1024 / sizeof(int), NULL, 2, NULL);
-// }
+void sAPP_Tasks_StartCalibAccBias(){
+    xTaskCreate(imu_calib_acc_bias      , "calibAccBias" , 1024 / sizeof(int), NULL, 2, NULL);
+}
 
-// void sAPP_Tasks_StartCalibGyrBias(){
-//     xTaskCreate(imu_calib_gyr_bias      , "calibGyrBias" , 1024 / sizeof(int), NULL, 2, NULL);
-// }
+void sAPP_Tasks_StartCalibGyrBias(){
+    xTaskCreate(imu_calib_gyr_bias      , "calibGyrBias" , 1024 / sizeof(int), NULL, 2, NULL);
+}
 
 
 void sAPP_Tasks_PrintTaskMang(){

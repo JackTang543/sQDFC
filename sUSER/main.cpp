@@ -22,11 +22,11 @@
  * !12. AHT20
  * !13. SPL01
  * 14. ADC
- * !15. IMU调温
+ * ? 15. IMU调温
  * 16. 打通MAVLink通信数据链
  * ? 17. 移植ekf_AltEst6
  * 18. 移植sLib的Fliter
- * 19. 移植FreeRTOS的CLI
+ * ? 19. 移植FreeRTOS的CLI
  *
  *  */
 
@@ -43,11 +43,25 @@ int main() {
     cm_backtrace_init(APPNAME, HARDWARE_VERSION, SOFTWARE_VERSION);
 
     sBSP_TIM_IMUHeater_Init();
-    sBSP_TIM_IMUHeater_SetPWMFreq(84000);
+    sBSP_TIM_IMUHeater_SetPWMFreq(50000);   //50KHz
     // sBSP_TIM_IMUHeater_SetDuty(0.5f);
     sBSP_TIM_IMUHeater_SetEN(1);
 
+    sBSP_I2C1_Init(100000); // 初始化I2C1,100KHz
+
+    sDRV_AHT20_Init();
+    sDRV_SPL06_Init();
+
+    // //扫描一下所有I2C设备
+    // log_printfln("Scanning I2C devices...");
+    // for(uint8_t i = 0; i < 127; i++) {
+    //     if(sBSP_I2C1M_DevIsReady(i << 1)) {
+    //         sBSP_UART_Debug_Printf("I2C device found: 0x%02X\n", i << 1);
+    //     }
+    // }
+
     sAPP_CLI_Init();
+
 
 
     log_printfln("Hello I'm sightseer's Quad Drone Flight Controller v1"); // 打印Hello World!
@@ -70,6 +84,7 @@ int main() {
 
 
 
+
     sBSP_UART_Debug_Printf("Current free heap size: %u bytes\n", (unsigned int)xPortGetFreeHeapSize());
 
     sAPP_Tasks_CreateAll();
@@ -82,6 +97,11 @@ int main() {
         //  HAL_GPIO_TogglePin(IMU_SCK_GPIO_Port,IMU_SCK_Pin); //翻转SCK引脚
         //  HAL_GPIO_TogglePin(IMU_MISO_GPIO_Port,IMU_MOSI_Pin); //翻转MISO引脚
         HAL_GPIO_TogglePin(RUN_LED_GPIO_Port, RUN_LED_Pin); // 翻转RUN LED引脚
+
+        sDRV_AHT20_StartMeasure();
         HAL_Delay(100);                                     // 延时500ms
+        float temp, humi;
+        sDRV_AHT20_GetMeasure(&temp, &humi);
+        sBSP_UART_Debug_Printf("AHT20: %.2f,%.2f\n", temp, humi);
     }
 }

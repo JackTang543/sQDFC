@@ -4,6 +4,7 @@
 #include "semphr.h"
 
 #include "sAPP_AHRS.hpp"
+#include "sAPP_Tasks.hpp"
 
 #include "sBSP_UART.h"
 
@@ -72,6 +73,19 @@ const CLI_Command_Definition_t comm_showEuler = {
     0                                       
 };
 
+/*手动校准陀螺仪零偏*/
+static BaseType_t calibGyrBias(char* pcWriteBuffer, size_t xWriteBufferLen, const char* pcCommandString) {
+    sAPP_Tasks_StartCalibGyrBias();
+    return pdFALSE;
+}
+const CLI_Command_Definition_t comm_calibGyrBias = {
+    "calibGyrBias",                               
+    "calibGyrBias:手动校准陀螺仪静态零偏\n", 
+    calibGyrBias,                                 
+    0                                       
+};
+
+
 /*停止任何的循环打印数据流*/
 static BaseType_t stop(char* pcWriteBuffer, size_t xWriteBufferLen, const char* pcCommandString) {
     if(cli_send_data_packet.send_en == 1) {
@@ -90,11 +104,15 @@ const CLI_Command_Definition_t comm_stop = {
     0,
 };
 
+
+
+
 int sAPP_CLI_Init() {
     sem_debug_uart_recved = xSemaphoreCreateBinary();
 
     FreeRTOS_CLIRegisterCommand(&comm_reset);
     FreeRTOS_CLIRegisterCommand(&comm_showEuler);
+    FreeRTOS_CLIRegisterCommand(&comm_calibGyrBias);
 
 
 
@@ -140,21 +158,21 @@ void sAPP_CLI_SendTask(void* param){
 
     for(;;){
         if(cli_send_data_packet.send_en == 1){
-            //需要发送数据了
-
             //发送欧拉角
             if(cli_send_data_packet.type == SEND_DATA_TYPE::EULER){
                 //先获取锁
                 float pitch, roll, yaw;
+                float imu_temp;
                 if(xSemaphoreTake(ahrs.output.lock, 200) == pdTRUE){
                     //获取欧拉角
                     pitch = ahrs.output.pitch;
                     roll  = ahrs.output.roll;
                     yaw   = ahrs.output.yaw;
+                    imu_temp = ahrs.raw_data.imu_temp;
                     //释放锁
                     xSemaphoreGive(ahrs.output.lock);
                 }
-                sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f\n", pitch, roll, yaw);
+                sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%.1f\n", pitch, roll, yaw, imu_temp);
             }
 
             vTaskDelay(cli_send_data_packet.send_intervals_ms / portTICK_PERIOD_MS);

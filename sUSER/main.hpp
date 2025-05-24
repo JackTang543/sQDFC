@@ -3,14 +3,17 @@
 #include "math.h"
 #include "stm32f4xx_hal.h"
 
-#include "sDRV_ICM45686.h"
-#include "sDRV_LIS3MDLTR.h"
+
 
 #include "sAPP_Debug.h"
 #include "sAPP_AHRS.hpp"
 #include "sAPP_Tasks.hpp"
 #include "sAPP_CLI.hpp"
 
+#include "sDRV_ICM45686.h"
+#include "sDRV_LIS3MDLTR.h"
+#include "sDRV_AHT20.h"
+#include "sDRV_SPL06.h"
 
 #include "sBSP_GPIO.h"
 #include "sBSP_SPI.h"

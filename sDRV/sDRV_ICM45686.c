@@ -575,7 +575,7 @@ int sDRV_ICM45686_Init(){
 
     //初始化配置:实时性+++
     sDRV_ICM45686_Conf_t icm_conf = {0};
-    icm_conf.gyro_fs    = SDRV_ICM45686_GYRO_UI_FS_SEL_500DPS;
+    icm_conf.gyro_fs    = SDRV_ICM45686_GYRO_UI_FS_SEL_1000DPS;
     icm_conf.gyro_odr   = SDRV_ICM45686_GYRO_ODR_400HZ;
     icm_conf.accel_fs   = SDRV_ICM45686_ACCEL_UI_FS_SEL_4G;
     icm_conf.accel_odr  = SDRV_ICM45686_ACCEL_ODR_400HZ;
