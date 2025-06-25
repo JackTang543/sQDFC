@@ -25,7 +25,7 @@ I2C_HandleTypeDef hi2c1;
 int8_t sBSP_I2C1_Init(uint32_t ClkSpdHz) {
     hi2c1.Instance        = I2C1;
     hi2c1.Init.ClockSpeed = ClkSpdHz;
-    hi2c1.Init.DutyCycle  = I2C_DUTYCYCLE_16_9;
+    hi2c1.Init.DutyCycle  = I2C_DUTYCYCLE_2;
     // 从模式地址,主模式不需要
     hi2c1.Init.OwnAddress1 = 0;
     // 地址长度,从模式的设置
@@ -298,23 +298,23 @@ bool sBSP_I2C1M_DevIsReady(uint16_t DevAddr) {
     }
 }
 
-void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef* hi2c) {
-    if(hi2c->Instance == I2C1) {
-        I2C1M_TxCpltFlag = 1;
-    }
-}
+// void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef* hi2c) {
+//     if(hi2c->Instance == I2C1) {
+//         I2C1M_TxCpltFlag = 1;
+//     }
+// }
 
-void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef* hi2c) {
-    if(hi2c->Instance == I2C1) {
-        I2C1M_RxCpltFlag = 1;
-    }
-}
+// void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef* hi2c) {
+//     if(hi2c->Instance == I2C1) {
+//         I2C1M_RxCpltFlag = 1;
+//     }
+// }
 
-void HAL_I2C_ErrorCallback(I2C_HandleTypeDef* hi2c) {
-    if(hi2c->Instance == I2C1) {
-        // sHMI_Debug_Printf("sBSP_I2C:ERROR\n");
-    }
-}
+// void HAL_I2C_ErrorCallback(I2C_HandleTypeDef* hi2c) {
+//     if(hi2c->Instance == I2C1) {
+//         // sHMI_Debug_Printf("sBSP_I2C:ERROR\n");
+//     }
+// }
 
 void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c) {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -334,9 +334,9 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c) {
         /* I2C1 clock enable */
         __HAL_RCC_I2C1_CLK_ENABLE();
 
-        HAL_NVIC_SetPriority(I2C1_EV_IRQn, 5, 0);
+        HAL_NVIC_SetPriority(I2C1_EV_IRQn, 4, 0);
         HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
-        HAL_NVIC_SetPriority(I2C1_ER_IRQn, 5, 0);
+        HAL_NVIC_SetPriority(I2C1_ER_IRQn, 4, 0);
         HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
     }
 }

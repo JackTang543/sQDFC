@@ -16,8 +16,8 @@
 //中断服务函数标识
 #define ISR_ATTR       __attribute__((used))
 
-#define APPNAME                        "sGCARCv5"
-#define HARDWARE_VERSION               "V5.2"
+#define APPNAME                        "sQDFC"
+#define HARDWARE_VERSION               "V2.0"
 #define SOFTWARE_VERSION               "V1.0"
 
 #define KEY_Pin                        GPIO_PIN_13

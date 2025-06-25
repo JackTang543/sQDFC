@@ -15,6 +15,13 @@ void sBSP_TIM_IMUHeater_SetDuty(float percent);
 
 
 
+
+
+int sBSP_TIM_DSHOT300_Init();
+void sBSP_TIM_DSHOT300_SetEn(bool is_en);
+void sBSP_TIM_DSHOT300_SendPacket(uint16_t lu1, uint16_t ru2, uint16_t ld3, uint16_t rd4);
+
+
 #ifdef __cplusplus
 }
 #endif

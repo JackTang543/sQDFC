@@ -3,24 +3,16 @@
 extern "C" {
 #endif
 
+#include "stm32f4xx_hal.h"
 
 
 
 
 
-int sDRV_SPL06_Init();
-int sDRV_SPL06_ReadData(float* press_pa,float* temp_c);
-
-
-
-
-
+void sBSP_DMA_Init();
 
 
 
 #ifdef __cplusplus
 }
 #endif
-
-
-

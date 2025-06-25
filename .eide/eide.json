@@ -35,8 +35,8 @@
       "compileConfig": {
         "cpuType": "Cortex-M4",
         "floatingPointHardware": "single",
-        "useCustomScatterFile": false,
-        "scatterFilePath": "<YOUR_SCATTER_FILE>.sct",
+        "useCustomScatterFile": true,
+        "scatterFilePath": "build/sQDFC.sct",
         "storageLayout": {
           "RAM": [
             {

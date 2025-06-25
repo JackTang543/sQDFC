@@ -71,9 +71,9 @@ void DMA2_Stream0_IRQHandler(void){
     // HAL_DMA_IRQHandler(&hdma2_stream0);
 }
 
-void DMA2_Stream2_IRQHandler(void){
-    // HAL_DMA_IRQHandler(&hdma_usart1_rx);
-}
+// void DMA2_Stream2_IRQHandler(void){
+//     // HAL_DMA_IRQHandler(&hdma_usart1_rx);
+// }
 
 void DMA2_Stream5_IRQHandler(void){
     // HAL_DMA_IRQHandler(&hdma_spi1_tx);
