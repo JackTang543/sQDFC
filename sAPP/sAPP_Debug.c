@@ -11,7 +11,9 @@
 void Error_Handler(){
     __disable_irq();
     while (1){
-        log_error("发生错误: 禁用IRQ,死循环...");
+        log_error("发生错误: 禁用IRQ,系统重启...");
+        NVIC_SystemReset();
+
         HAL_Delay(500);
     }
 }

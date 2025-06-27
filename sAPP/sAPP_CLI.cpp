@@ -86,6 +86,73 @@ const CLI_Command_Definition_t comm_calibGyrBias = {
 };
 
 
+extern float lu_speed;
+extern float ru_speed;
+extern float ld_speed;
+extern float rd_speed;
+
+/*手动设置油门*/
+static BaseType_t setThrottle(char* pcWriteBuffer, size_t xWriteBufferLen, const char* pcCommandString) {
+    // 解析命令字符串
+    const char* p = (char*)pcCommandString;
+    float _lu_speed, _ru_speed, _ld_speed, _rd_speed;
+    if(sscanf(p, "setThrottle %f %f %f %f", &_lu_speed, &_ru_speed, &_ld_speed, &_rd_speed) == 4){
+        // 设置油门速度
+        lu_speed = _lu_speed;
+        ru_speed = _ru_speed;
+        ld_speed = _ld_speed;
+        rd_speed = _rd_speed;
+    }
+    else {
+        lu_speed = 0.0f;
+        ru_speed = 0.0f;
+        ld_speed = 0.0f;
+        rd_speed = 0.0f;
+    }
+
+    // snprintf(pcWriteBuffer, xWriteBufferLen, "SET LU=%.1f,RU=%.1f,LD=%.1f,RD=%.1f\n", lu_speed, ru_speed, ld_speed, rd_speed);
+
+
+    return pdFALSE;
+}
+const CLI_Command_Definition_t comm_setThrottle = {
+    "setThrottle",                               
+    "setThrottle:手动设置油门,格式:setThrottle <left_up> <right_up> <left_down> <right_down>\n", 
+    setThrottle,                                 
+    4                                       
+};
+
+
+/*设置所有电机的推力*/
+static BaseType_t setAllMotors(char* pcWriteBuffer, size_t xWriteBufferLen, const char* pcCommandString) {
+    // 解析命令字符串
+    const char* p = (char*)pcCommandString;
+    float _lu_speed, _ru_speed, _ld_speed, _rd_speed;
+    if(sscanf(p, "setAllMotors %f", &_lu_speed) == 1){
+        // 设置油门速度
+        lu_speed = _lu_speed;
+        ru_speed = _lu_speed;
+        ld_speed = _lu_speed;
+        rd_speed = _lu_speed;
+    }
+    else {
+        lu_speed = 0.0f;
+        ru_speed = 0.0f;
+        ld_speed = 0.0f;
+        rd_speed = 0.0f;
+    }
+
+    // snprintf(pcWriteBuffer, xWriteBufferLen, "SET LU=%.1f,RU=%.1f,LD=%.1f,RD=%.1f\n", lu_speed, ru_speed, ld_speed, rd_speed);
+
+    return pdFALSE;
+}
+const CLI_Command_Definition_t comm_setAllMotors = {
+    "setAllMotors",                               
+    "setAllMotors:手动设置所有电机的推力,格式:setAllMotors <left_up> <right_up> <left_down> <right_down>\n", 
+    setAllMotors,                                 
+    1                                       
+};
+
 /*停止任何的循环打印数据流*/
 static BaseType_t stop(char* pcWriteBuffer, size_t xWriteBufferLen, const char* pcCommandString) {
     if(cli_send_data_packet.send_en == 1) {
@@ -113,6 +180,8 @@ int sAPP_CLI_Init() {
     FreeRTOS_CLIRegisterCommand(&comm_reset);
     FreeRTOS_CLIRegisterCommand(&comm_showEuler);
     FreeRTOS_CLIRegisterCommand(&comm_calibGyrBias);
+    FreeRTOS_CLIRegisterCommand(&comm_setThrottle);
+    FreeRTOS_CLIRegisterCommand(&comm_setAllMotors);
 
 
 

@@ -11,7 +11,11 @@
   ],
   "virtualFolder": {
     "name": "<virtual_root>",
-    "files": [],
+    "files": [
+      {
+        "path": "sLIB/DSP/arm_cortexM4lf_math.lib"
+      }
+    ],
     "folders": []
   },
   "outDir": "build",
@@ -116,7 +120,10 @@
           "sLIB/FreeRTOS",
           "sLIB/FreeRTOS/portable/GCC",
           "sLIB/MadgwickAHRS",
-          "sLIB/cm_backtrace"
+          "sLIB/cm_backtrace",
+          "sLIB/DSP/Include",
+          "sLIB/DSP/Include/dsp",
+          "sLIB/DSP/ComputeLibrary/Include"
         ],
         "libList": [],
         "defineList": [
@@ -165,7 +172,8 @@
             "optimization": "level-0",
             "language-c": "gnu17",
             "language-cpp": "gnu++17",
-            "warnings": "ac5-like-warnings"
+            "warnings": "ac5-like-warnings",
+            "short-enums#wchar": true
           },
           "asm-compiler": {
             "$use": "asm-auto"

@@ -26,7 +26,7 @@ void sBSP_GPIO_IcmInt_Init(){
 
 extern void sAPP_AHRS_ICMDataReadyCbISR();
 
-void ISR_ATTR IRAM2_ATTR HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+void ISR_ATTR IRAM1_ATTR HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
     // log_printfln("GPIO_Pin: %d",GPIO_Pin);
     
     if(GPIO_Pin == ICM_INT_Pin){

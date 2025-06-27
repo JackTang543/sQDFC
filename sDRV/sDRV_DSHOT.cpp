@@ -31,6 +31,7 @@ void sDRV_DSHOT::setSpeedPercentage(float lu1, float ru2, float ld3, float rd4) 
     ld3_throttle = static_cast<uint16_t>(sut_fmap(ld3, 0.0f, 100.0f, 48.0f, 2047.0f));
     rd4_throttle = static_cast<uint16_t>(sut_fmap(rd4, 0.0f, 100.0f, 48.0f, 2047.0f));
 
+
     // 转换为DSHOT格式的油门包
     lu1_packet = throttle2dshot(lu1_throttle);
     ru2_packet = throttle2dshot(ru2_throttle);

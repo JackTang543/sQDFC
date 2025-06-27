@@ -10,6 +10,8 @@
 #include "sAPP_Tasks.hpp"
 #include "sAPP_CLI.hpp"
 #include "sAPP_ParamSave.hpp"
+#include "sAPP_MAVLink.hpp"
+#include "sAPP_FlightCtrl.hpp"
 
 #include "sDRV_ICM45686.h"
 #include "sDRV_LIS3MDLTR.h"
@@ -38,7 +40,10 @@
 #include <cstdio>
 
 
+#include "arm_math.h"
 
+
+#include "sDWTLib\sDWTLib.hpp"
 #include "ekf_AltEst6\ekf_AltEst6.h"
 
 

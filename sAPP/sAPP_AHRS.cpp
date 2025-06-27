@@ -6,8 +6,8 @@
  *
  *
  * v1.1 241223 bySightseer.
- * ! 注意,因为改变了IMU数据获取方式,从直接获取变成了中断式获取,以降低latency
- * ! 所以,现在暂时不能用除ICM45686以外的其他IMU!!!
+ * 注意,因为改变了IMU数据获取方式,从直接获取变成了中断式获取,以降低latency
+ * 所以,现在暂时不能用除ICM45686以外的其他IMU!!!
  *
  *
  */
@@ -20,6 +20,38 @@
 
 #include "sBSP_UART.h"
 #include "sAPP_Debug.h"
+
+
+#include "arm_math.h"
+
+//陀螺仪2级联滤波
+/* 先 Notch@219.5 Hz, Q=4   再 Butterworth LPF 100 Hz */
+static const float gyr_filter_coef[2 * 5] = {
+    /* Stage-0 : Notch 219.5 Hz  (b0  b1  b2  -a1  -a2) */
+    0.8204f,  0.2503f,   0.8204f,   -0.2503f,  -0.6408f,
+    /* Stage-1 : 2-pole Butter LPF 100 Hz */
+    0.0976f,  0.1953f,   0.0976f,    0.9428f,  -0.3333f
+};
+static float gyr_filter_x_state[4 * 2];
+static float gyr_filter_y_state[4 * 2];
+static float gyr_filter_z_state[4 * 2];
+static arm_biquad_casd_df1_inst_f32 gyr_filter_x;
+static arm_biquad_casd_df1_inst_f32 gyr_filter_y;
+static arm_biquad_casd_df1_inst_f32 gyr_filter_z;
+
+//加速度计二阶巴特沃斯LPF Fc=15Hz
+static const float acc_filter_coef[1 * 5] = {
+    0.3913f,    0.7827f,    0.3913f,    -0.3695f,   -0.1958f,
+};
+static float acc_filter_x_state[4 * 1];
+static float acc_filter_y_state[4 * 1];
+static float acc_filter_z_state[4 * 1];
+static arm_biquad_casd_df1_inst_f32 acc_filter_x;
+static arm_biquad_casd_df1_inst_f32 acc_filter_y;
+static arm_biquad_casd_df1_inst_f32 acc_filter_z;
+
+
+
 
 AHRS ahrs;
 
@@ -77,6 +109,14 @@ int AHRS::init(IMUType imu_type, MAGType mag_type) {
             mag_state = MAGState::NO_MAG;
         }
     }
+
+    arm_biquad_cascade_df1_init_f32(&gyr_filter_x, 2, gyr_filter_coef, gyr_filter_x_state);
+    arm_biquad_cascade_df1_init_f32(&gyr_filter_y, 2, gyr_filter_coef, gyr_filter_y_state);
+    arm_biquad_cascade_df1_init_f32(&gyr_filter_z, 2, gyr_filter_coef, gyr_filter_z_state);
+
+    arm_biquad_cascade_df1_init_f32(&acc_filter_x, 1, acc_filter_coef, acc_filter_x_state);
+    arm_biquad_cascade_df1_init_f32(&acc_filter_y, 1, acc_filter_coef, acc_filter_y_state);
+    arm_biquad_cascade_df1_init_f32(&acc_filter_z, 1, acc_filter_coef, acc_filter_z_state);
 
     ekf_AltEst6_init();
 
@@ -258,6 +298,8 @@ void AHRS::getIMUData() {
     }
 }
 
+#include "sDWTLib\sDWTLib.hpp"
+
 
 // AHRS任务,非阻塞式获取数据
 void sAPP_AHRS_Task(void* param) {
@@ -266,14 +308,38 @@ void sAPP_AHRS_Task(void* param) {
     float state[5] = {0};
 
     bool is_first = true;
+    // 用于判断加速度计数据是否准备就绪
+    bool is_acc_new_ready = true;
+    float last_acc[3] = {0};
+
+    portTASK_USES_FLOATING_POINT();
 
     static uint32_t last_ts_ms = 0;
     static uint32_t ts_ms      = 0;
     static uint32_t dt_ms      = 0;
 
+    const float dt = 1.0f / 800.0f;   //1.25ms
+
     for(;;) {
-        // 当数据准备就绪则运行AHRS算法,此步骤消耗时间60us
+        // 当数据准备就绪则运行AHRS算法,此步骤消耗时间50us~150us之间
         if(xSemaphoreTake(ahrs.imu_data_ready, 200) == pdTRUE) {
+            /*计算两次调用的时间间隔*/
+            if(!is_first) {
+                last_ts_ms = ts_ms;
+                ts_ms      = HAL_GetTick();
+                dt_ms      = ts_ms - last_ts_ms;
+            } else {
+                last_ts_ms = HAL_GetTick();
+                ts_ms      = last_ts_ms;
+                is_first   = false;
+            }
+            // 超时则报错
+            if(dt_ms > 10) {
+                dt_ms           = 10;
+                ahrs.fatal_flag = AHRS::FatalFlag::DT_MS_TOO_LARGE;
+                ahrs.error_handler();
+                Error_Handler();
+            }
 
             /*获取原始数据*/
             ahrs.getIMUData();
@@ -283,12 +349,14 @@ void sAPP_AHRS_Task(void* param) {
             ahrs.output.mag_temp = ahrs.raw_data.mag_temp;
 
             /*对IMU进行零偏校准*/
-            ahrs.output.acc_x = ahrs.raw_data.acc_x - ahrs.imu_sbias.acc_x;
-            ahrs.output.acc_y = ahrs.raw_data.acc_y - ahrs.imu_sbias.acc_y;
-            ahrs.output.acc_z = ahrs.raw_data.acc_z - ahrs.imu_sbias.acc_z;
-            ahrs.output.gyr_x = ahrs.raw_data.gyr_x - ahrs.imu_sbias.gyr_x;
-            ahrs.output.gyr_y = ahrs.raw_data.gyr_y - ahrs.imu_sbias.gyr_y;
-            ahrs.output.gyr_z = ahrs.raw_data.gyr_z - ahrs.imu_sbias.gyr_z;
+            float input_gyr[3] = {0};
+            float input_acc[3] = {0};
+            input_gyr[0] = ahrs.raw_data.gyr_x - ahrs.imu_sbias.gyr_x;
+            input_gyr[1] = ahrs.raw_data.gyr_y - ahrs.imu_sbias.gyr_y;
+            input_gyr[2] = ahrs.raw_data.gyr_z - ahrs.imu_sbias.gyr_z;
+            input_acc[0] = ahrs.raw_data.acc_x - ahrs.imu_sbias.acc_x;
+            input_acc[1] = ahrs.raw_data.acc_y - ahrs.imu_sbias.acc_y;
+            input_acc[2] = ahrs.raw_data.acc_z - ahrs.imu_sbias.acc_z;
 
             /*对磁力计进行校准*/
             // 硬磁校准
@@ -300,60 +368,48 @@ void sAPP_AHRS_Task(void* param) {
             ahrs.output.mag_y = ahrs.mag_cali.soft[3] * ahrs.raw_data.mag_x + ahrs.mag_cali.soft[4] * ahrs.raw_data.mag_y + ahrs.mag_cali.soft[5] * ahrs.raw_data.mag_z;
             ahrs.output.mag_z = ahrs.mag_cali.soft[6] * ahrs.raw_data.mag_x + ahrs.mag_cali.soft[7] * ahrs.raw_data.mag_y + ahrs.mag_cali.soft[8] * ahrs.raw_data.mag_z;
 
-            /*给姿态解算准备数据*/
-            float input_gyr[3] = {ahrs.output.gyr_x, ahrs.output.gyr_y, ahrs.output.gyr_z};
-            float input_acc[3] = {ahrs.output.acc_x, ahrs.output.acc_y, ahrs.output.acc_z};
-            float input_mag[3] = {ahrs.output.mag_x, ahrs.output.mag_y, ahrs.output.mag_z};
+            float filt_gyr[3] = {0};
+            //陀螺仪数据滤波器 Notch@213Hz, Butterworth LPF@80Hz
+            arm_biquad_cascade_df1_f32(&gyr_filter_x, &input_gyr[0], &filt_gyr[0], 1);
+            arm_biquad_cascade_df1_f32(&gyr_filter_y, &input_gyr[1], &filt_gyr[1], 1);
+            arm_biquad_cascade_df1_f32(&gyr_filter_z, &input_gyr[2], &filt_gyr[2], 1);
+
+            //加速度的数据更新频率是50Hz,如果按800Hz的频率计算会导致滤波器失真
+            //如果加速度计数据与上次数据有差异,则认为是新数据,两次的float是相同的(bit-perfect),所以可以直接比较
+            is_acc_new_ready =  *(uint32_t*)&input_acc[0] != *(uint32_t*)&last_acc[0] ||
+                                *(uint32_t*)&input_acc[1] != *(uint32_t*)&last_acc[1] ||
+                                *(uint32_t*)&input_acc[2] != *(uint32_t*)&last_acc[2];
+            
+            last_acc[0] = input_acc[0];
+            last_acc[1] = input_acc[1];
+            last_acc[2] = input_acc[2];
+
+            float filt_acc[3] = {0};
+            //加速度计数据滤波器 2阶巴特沃斯LPF@15Hz
+            if(is_acc_new_ready){
+                arm_biquad_cascade_df1_f32(&acc_filter_x, &input_acc[0], &filt_acc[0], 1);
+                arm_biquad_cascade_df1_f32(&acc_filter_y, &input_acc[1], &filt_acc[1], 1);
+                arm_biquad_cascade_df1_f32(&acc_filter_z, &input_acc[2], &filt_acc[2], 1);
+            }
+
             float eul[3]       = {0};
             float quat[4]      = {0};
 
-            /*计算两次调用的时间间隔*/
-            if(!is_first) {
-                last_ts_ms = ts_ms;
-                ts_ms      = HAL_GetTick();
-                dt_ms      = ts_ms - last_ts_ms;
-            } else {
-                last_ts_ms = HAL_GetTick();
-                ts_ms      = last_ts_ms;
-                is_first   = false;
-            }
-
-            // 超时则报错
-            if(dt_ms > 50) {
-                dt_ms           = 50;
-                ahrs.fatal_flag = AHRS::FatalFlag::DT_MS_TOO_LARGE;
-                ahrs.error_handler();
-            }
-
-
-
-            // //给互补滤波准备数据
-            // ahrs.input.acc_x  = ahrs.dat.acc_x;
-            // ahrs.input.acc_y  = ahrs.dat.acc_y;
-            // ahrs.input.acc_z  = ahrs.dat.acc_z;
-            // ahrs.input.gyro_x = ahrs.dat.gyr_x;
-            // ahrs.input.gyro_y = ahrs.dat.gyr_y;
-            // ahrs.input.gyro_z = ahrs.dat.gyr_z;
-            // 融合算法
-            // sLib_6AxisCompFilter(&ahrs.input, &ahrs.result);
-            // complementary_filter(&ahrs.input, &ahrs.result);
-
-            float dt = dt_ms / 1000.0f;
             // MadgwickAHRSupdate(input_gyr[0] * DEG2RAD, input_gyr[1] * DEG2RAD, input_gyr[2] * DEG2RAD, input_acc[0], input_acc[1], input_acc[2], input_mag[0], input_mag[1], input_mag[2]);
-            // MadgwickAHRSupdateIMU(input_gyr[0] * DEG2RAD, input_gyr[1] * DEG2RAD, input_gyr[2] * DEG2RAD, input_acc[0], input_acc[1], input_acc[2]);
+            MadgwickAHRSupdateIMU(filt_gyr[0] * DEG2RAD, filt_gyr[1] * DEG2RAD, filt_gyr[2] * DEG2RAD, input_acc[0], input_acc[1], input_acc[2]);
             //四元数转换欧拉角
-            //把上面的全部替换成q0 q1这样
-            // eul[0] = atan2f(2.0F * (q0 * q1 + q2 * q3), 1.0F - 2.0F * (q1 * q1 + q2 * q2)) * RAD2DEG;
-            // eul[1] = asinf(2.0F * (q0 * q2 - q1 * q3)) * RAD2DEG;
-            // eul[2] = atan2f(2.0F * (q0 * q3 + q1 * q2), 1.0F - 2.0F * (q2 * q2 + q3 * q3)) * RAD2DEG;
-            // quat[0] = q0;
-            // quat[1] = q1;
-            // quat[2] = q2;
-            // quat[3] = q3;
+            eul[0] = atan2f(2.0F * (q0 * q1 + q2 * q3), 1.0F - 2.0F * (q1 * q1 + q2 * q2)) * RAD2DEG;
+            eul[1] = asinf(2.0F * (q0 * q2 - q1 * q3)) * RAD2DEG;
+            eul[2] = atan2f(2.0F * (q0 * q3 + q1 * q2), 1.0F - 2.0F * (q2 * q2 + q3 * q3)) * RAD2DEG;
+            quat[0] = q0;
+            quat[1] = q1;
+            quat[2] = q2;
+            quat[3] = q3;
+
             // eul[0] = atan2f(2.0F * (quat[0] * quat[1] + quat[2] * quat[3]), 1.0F - 2.0F * (quat[1] * quat[1] + quat[2] * quat[2]));
             
             // MadgwickAHRSupdate(input_gyr[0], input_gyr[1], input_gyr[2], input_acc[0], input_acc[1], input_acc[2],input_mag[0], input_mag[1], input_mag[2]);
-            ekf_AltEst6(input_gyr, input_acc, 2, dt, eul, quat, state);
+            // ekf_AltEst6(filt_gyr, input_acc, 2, dt, eul, quat, state);
             // sBSP_UART_Debug_Printf("%u\n",dwt.get_us());
             // sBSP_UART_Debug_Printf("%.3f,%.3f,%.3f,%u\n",ahrs.raw_data.gyr_x,ahrs.raw_data.gyr_y,ahrs.raw_data.gyr_z,HAL_GetTick());
             // sBSP_UART_Debug_Printf("%.3f,%.3f,%.3f,%u\n",ahrs.raw_data.acc_x,ahrs.raw_data.acc_y,ahrs.raw_data.acc_z,HAL_GetTick());
@@ -371,13 +427,13 @@ void sAPP_AHRS_Task(void* param) {
             eul[0],eul[1],eul[2],bias[0],bias[1]);
             // sBSP_UART_Debug_Printf("%u,%u\n",HAL_GetTick(),dwt.get_us());
 
-            ahrs.output.pitch = eul[0];
-            ahrs.output.roll  = eul[1];
-            ahrs.output.yaw   = eul[2];
-            ahrs.output.q0    = quat[0];
-            ahrs.output.q1    = quat[1];
-            ahrs.output.q2    = quat[2];
-            ahrs.output.q3    = quat[3];
+            // ahrs.output.pitch = eul[0];
+            // ahrs.output.roll  = eul[1];
+            // ahrs.output.yaw   = eul[2];
+            // ahrs.output.q0    = quat[0];
+            // ahrs.output.q1    = quat[1];
+            // ahrs.output.q2    = quat[2];
+            // ahrs.output.q3    = quat[3];
 
             // 打印出欧拉角
             // sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f\n", ahrs.output.pitch, ahrs.output.roll, ahrs.output.yaw);
@@ -385,11 +441,38 @@ void sAPP_AHRS_Task(void* param) {
             // sBSP_UART_Debug_Printf("%.2f\n",ahrs.raw_data.imu_temp);
             // sBSP_UART_Debug_Printf("%u,%u\n",HAL_GetTick(),dwt.get_us());
 
+            //打印raw_gyr
+            // sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%u\n",input_gyr[0], input_gyr[1], input_gyr[2], HAL_GetTick());
 
-            // float yaw = atan2f(ahrs.dat.mag_y,ahrs.dat.mag_x) * RAD2DEG;
-            // float yaw = atan2f(ahrs.dat.mag_x,ahrs.dat.mag_y) * RAD2DEG;
+            // sBSP_UART_Debug_Printf("%.2f,%.2f\n",input_gyr[0], filt_gyr[0]);
 
-            // sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%.2f,%u\n",ahrs.dat.mag_x,ahrs.dat.mag_y,ahrs.dat.mag_z,yaw,HAL_GetTick());
+            sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%u\n",filt_gyr[0],filt_gyr[1],filt_gyr[2],eul[0], eul[1], eul[2], HAL_GetTick());
+
+
+            // sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%u\n",filt_gyr[0],filt_gyr[1],filt_gyr[2],input_gyr[0], input_gyr[1], input_gyr[2], HAL_GetTick());
+
+
+            // sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%u\n",filt_gyr[0],filt_gyr[1],filt_gyr[2], HAL_GetTick());
+            // sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%u\n",input_gyr[0],input_gyr[1],input_gyr[2], HAL_GetTick());
+            
+
+            // sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%u\n",filt_gyr[0],filt_gyr[1],filt_gyr[2], HAL_GetTick());
+            // sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%u\n",input_acc[0],input_acc[1],input_acc[2], HAL_GetTick());
+            // sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%u\n",input_acc[0],input_acc[1],input_acc[2], HAL_GetTick());
+            // sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%u\n",filt_acc[0],filt_acc[1],filt_acc[2], HAL_GetTick());
+            
+
+
+
+            // sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%u\n",ahrs.raw_data.acc_x, ahrs.raw_data.acc_y, ahrs.raw_data.acc_z,HAL_GetTick());
+            //filt_gyr
+            // log_printf("%.2f,%.2f,%.2f\n", filt_gyr[0], filt_gyr[1], filt_gyr[2]);
+
+
+            // float yaw = atan2f(ahrs.raw_data.mag_x,ahrs.raw_data.mag_y) * RAD2DEG;
+            // float yaw = atan2f(ahrs.raw_data.mag_x,ahrs.raw_data.mag_y) * RAD2DEG;
+
+            // sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%.2f,%u\n",ahrs.raw_data.mag_x,ahrs.raw_data.mag_y,ahrs.raw_data.mag_z,yaw,HAL_GetTick());
             // 把新获取到的数据通过队列发送给blc_ctrl算法
             // xQueueSend(g_blc_ctrl_ahrs_queue,&ahrs.dat,200);
             // xQueueOverwrite(g_blc_ctrl_ahrs_queue,&ahrs.output);
@@ -425,7 +508,7 @@ void AHRS::periodicProcess(){
 
 
 
-void IRAM2_ATTR sAPP_AHRS_ICMDataReadyCbISR() {
+void IRAM1_ATTR sAPP_AHRS_ICMDataReadyCbISR() {
     portBASE_TYPE xHigherPriorityTaskWoken = pdFALSE;
     // 通知数据就绪
     xSemaphoreGiveFromISR(ahrs.imu_data_ready, &xHigherPriorityTaskWoken);
