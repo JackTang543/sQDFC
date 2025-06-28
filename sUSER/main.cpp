@@ -37,6 +37,8 @@
  *
  *  */
 
+#include "sDRV_MTF01P.hpp"
+
 int main() {
     HAL_Init(); // 初始化HAL库
 
@@ -48,6 +50,8 @@ int main() {
     // sBSP_UART_Debug_Init(115200);
     sBSP_UART_Debug_Init(2'000'000);
 
+    sBSP_UART_OpticalFlow_Init(115200);
+    
 
     // 启用除0异常
     SCB->CCR |= SCB_CCR_DIV_0_TRP_Msk;
@@ -55,8 +59,6 @@ int main() {
     cm_backtrace_init(APPNAME, HARDWARE_VERSION, SOFTWARE_VERSION);
 
     dwt.init(HAL_RCC_GetSysClockFreq());
-
-    // log_printfln("SYS CLK = %u Hz", HAL_RCC_GetSysClockFreq()); // 打印系统时钟频率
 
     // HAL_Delay(100);
 
@@ -71,9 +73,6 @@ int main() {
         sBSP_UART_Debug_Printf("DSHOT300初始化失败\n");
         Error_Handler(); // 如果初始化失败,进入错误处理
     }
-
-    // sBSP_TIM_DSHOT300_SetSpeedPercentage(10.0f, 10.0f, 10.0f, 10.0f); // 设置电调转速百分比为10%
-    // sBSP_TIM_DSHOT300_SetEn(true);                                    // 启用DSHOT300
 
     // motor.init([](uint16_t lu1, uint16_t ru2, uint16_t ld3, uint16_t rd4) {
     //     sBSP_TIM_DSHOT300_SendPacket(lu1, ru2, ld3, rd4);
@@ -126,6 +125,10 @@ int main() {
     vTaskStartScheduler();
 
     while(1) {
+
+
+
+
         // motor.setSpeedPercentage(10.0f, 2.0f, 2.0f, 2.0f);
         // motor.setSpeedPercentage(10.0f, 0.0f, 0.0f, 0.0f);
         // motor.setSpeedPercentage(3.0f, 3.0f, 3.0f, 3.0f);
@@ -149,6 +152,6 @@ int main() {
         //  HAL_GPIO_TogglePin(IMU_MISO_GPIO_Port,IMU_MOSI_Pin); //翻转MISO引脚
         HAL_GPIO_TogglePin(RUN_LED_GPIO_Port, RUN_LED_Pin); // 翻转RUN LED引脚
 
-        HAL_Delay(10);
+        HAL_Delay(100);
     }
 }

@@ -53,9 +53,7 @@ void DebugMon_Handler(void){
 }
 
 
-void USART1_IRQHandler(void){
-    HAL_UART_IRQHandler(&uart1);
-}
+
 
 void USART3_IRQHandler(void){
     // HAL_UART_IRQHandler(&uart3);

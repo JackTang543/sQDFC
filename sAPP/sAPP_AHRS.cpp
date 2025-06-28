@@ -446,8 +446,8 @@ void sAPP_AHRS_Task(void* param) {
 
             // sBSP_UART_Debug_Printf("%.2f,%.2f\n",input_gyr[0], filt_gyr[0]);
 
-            sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%u\n",filt_gyr[0],filt_gyr[1],filt_gyr[2],eul[0], eul[1], eul[2], HAL_GetTick());
-
+            // sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%u\n",filt_gyr[0],filt_gyr[1],filt_gyr[2],eul[0], eul[1], eul[2], HAL_GetTick());
+// 
 
             // sBSP_UART_Debug_Printf("%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%u\n",filt_gyr[0],filt_gyr[1],filt_gyr[2],input_gyr[0], input_gyr[1], input_gyr[2], HAL_GetTick());
 

@@ -2,6 +2,8 @@
 
 #include "main.hpp"
 
+#include "sAPP_OpticalFlow.hpp"
+
 void sAPP_Tasks_Devices(void* param) {
     for(;;) {
         // 处理按键
@@ -300,7 +302,9 @@ void sAPP_Tasks_CreateAll() {
     xTaskCreate(sAPP_Tasks_500ms, "500ms", 1024 / sizeof(int), NULL, 1, NULL);
     // xTaskCreate(sAPP_Tasks_1000ms       , "1000ms"       , 1024 / sizeof(int), NULL, 1, NULL);
     // xTaskCreate(sAPP_Tasks_TaskMang     , "TaskMang"     , 2048 / sizeof(int), NULL, 1, NULL);
-    xTaskCreate(sAPP_Tasks_LoopTask, "Loop", 8192 / sizeof(int), NULL, 3, NULL);
+    // xTaskCreate(sAPP_Tasks_LoopTask, "Loop", 8192 / sizeof(int), NULL, 3, NULL);
+
+    xTaskCreate(sAPP_OF_Task, "OpticalFlow", 4096 / sizeof(int), NULL, 2, NULL);
 }
 
 // void sAPP_Tasks_StartFormatFeRAM(){

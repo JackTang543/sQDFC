@@ -9,6 +9,7 @@
         "C_Cpp.default.configurationProvider": "cl.eide",
         "C_Cpp.errorSquiggles": "enabled",
         "files.associations": {
+            "*.cpp": "cpp",
             ".eideignore": "ignore",
             "*.a51": "a51",
             "*.h": "c",
@@ -16,9 +17,9 @@
             "*.hxx": "cpp",
             "*.hpp": "cpp",
             "*.c++": "cpp",
-            "*.cpp": "cpp",
             "*.cxx": "cpp",
-            "*.cc": "cpp"
+            "*.cc": "cpp",
+            "__config": "cpp"
         },
         "[yaml]": {
             "editor.insertSpaces": true,
